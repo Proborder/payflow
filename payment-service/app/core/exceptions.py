@@ -13,7 +13,7 @@ class ProviderEmptyResponseExceptions(ProviderExceptions):
 
 
 class ProviderConnectionExceptions(ProviderExceptions):
-    detail = "Провайдер не доступен"
+    detail = "Провайдер недоступен"
 
 
 class ServicePaymentExceptions(Exception):
