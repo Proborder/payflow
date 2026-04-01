@@ -4,9 +4,9 @@ services:
     container_name: payment_db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: payment
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASS}
+      POSTGRES_DB: ${DB_NAME}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d payment"]
       interval: 5s
@@ -57,19 +57,6 @@ services:
     volumes:
       - ./data/kafka_data:/var/lib/kafka/data
 
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka_ui
-    ports:
-      - "8080:8080"
-    depends_on:
-      kafka:
-        condition: service_healthy
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      DYNAMIC_CONFIG_ENABLED: 'true'
-
   payment-service:
     build:
       context: .
@@ -89,7 +76,10 @@ services:
       payment_redis:
         condition: service_healthy
     env_file:
-      - ./payment-service/.env.docker
+      - ./payment-service/.env
+    environment:
+      - DB_HOST=payment_db
+      - DB_PORT=5432
     ports:
       - "8000:8000"
 
