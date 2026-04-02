@@ -9,7 +9,7 @@ services:
       POSTGRES_DB: ${DB_NAME:-payment}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d payment"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
     ports:
@@ -23,8 +23,8 @@ services:
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 3s
+      interval: 10s
+      timeout: 5s
       retries: 5
     ports:
       - "6379:6379"
@@ -66,7 +66,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
-      start_period: 10s
+      start_period: 15s
     depends_on:
       payment_db:
         condition: service_healthy
