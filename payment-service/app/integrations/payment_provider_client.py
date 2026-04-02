@@ -4,9 +4,10 @@ import random
 import time
 from collections.abc import Callable
 from functools import wraps
+from typing import Any
 
 import httpx
-from httpx import ConnectError, ConnectTimeout, HTTPStatusError, RequestError, Response
+from httpx import AsyncClient, HTTPStatusError, Response, TimeoutException
 from starlette.responses import JSONResponse
 
 from app.core.exceptions import CircuitBreakerBlockedRequestExceptions, ProviderConnectionExceptions
@@ -23,20 +24,24 @@ def retry(func: Callable) -> Callable:
         for attempt in range(attempts):
             try:
                 return await func(*args, **kwargs)
-            except HTTPStatusError as ex:
-                if ex.response.is_client_error:
-                    logger.error(f"{func.__name__} Request error. Exception: {ex}")
+
+            except (TimeoutException, HTTPStatusError) as ex:
+                if isinstance(ex, HTTPStatusError) and ex.response.is_client_error:
+                    logger.error(f"{func.__name__} Client error", error=ex)
                     raise
-                elif ex.response.is_server_error:
-                    delay = (base_delay * 2 ** attempt) + random.uniform(0, 1) # noqa: S311
-                    logger.error(f"{func.__name__} Request error. Retry in {delay} 5 seconds")
-                    await asyncio.sleep(delay)
+
                 elif attempt >= 2:
                     logger.exception(f"{func.__name__} All retry attempts failed.")
                     raise
+
+                delay = (base_delay * 2 ** attempt) + random.uniform(0, 1)  # noqa: S311
+                logger.error(f"{func.__name__} Request error. Retry in {delay} seconds")
+                await asyncio.sleep(delay)
+
             except Exception as ex:
+                logger.error(f"{func.__name__} Unexpected error", error=ex)
                 raise ex
-        raise
+        return None
     return wrapper
 
 
@@ -83,18 +88,20 @@ class PaymentProviderClient:
         self.circuit_breaker: CircuitBreaker = CircuitBreaker(max_failure=5, recovery_delay=60)
 
     @retry
-    async def provider_request(self, payload) -> JSONResponse:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f"{self.base_url}/process-payment", json=payload)
-            response.raise_for_status()
-            return response.json()
+    async def provider_request(self, client: AsyncClient,  payload: dict[str, Any]) -> JSONResponse:
+        response = await client.post(f"{self.base_url}/process-payment", json=payload)
+        response.raise_for_status()
+        return response.json()
 
     async def process_payment(self, payload: PaymentResponse) -> Response:
         try:
-            return await self.circuit_breaker.call(self.provider_request, payload)
-        except (ConnectError, ConnectTimeout, RequestError) as ex:
-            logger.error(f"Error connect to payment provider: {ex}")
+            async with httpx.AsyncClient() as client:
+                return await self.circuit_breaker.call(self.provider_request,client, payload)
+        except TimeoutException as ex:
+            logger.error("Error connect to payment provider", erorr=ex)
             raise ProviderConnectionExceptions from ex
-        except CircuitBreakerBlockedRequestExceptions:
-            logger.error("CircuitBreaker blocked request")
+        except CircuitBreakerBlockedRequestExceptions as ex:
+            logger.error("CircuitBreaker blocked request", erorr=ex)
             raise
+        except Exception as ex:
+            raise ex

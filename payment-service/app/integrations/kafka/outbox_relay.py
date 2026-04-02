@@ -4,6 +4,7 @@ from datetime import datetime
 from aiokafka import AIOKafkaProducer
 from aiokafka.errors import KafkaError
 
+from app.core.config import settings
 from app.core.database import async_session_maker
 from app.core.logger import logger
 from app.repositories.outbox import OutboxRepository
@@ -40,14 +41,14 @@ async def outbox_relay_worker(producer: AIOKafkaProducer):
                             key=str(event.payload["id"]).encode("utf-8"),
                         )
                     except KafkaError as ex:
-                        logger.error(f"Failed to send event to Kafka\nData: {data}: {ex}")
+                        logger.error("Failed to send event to Kafka", data=data, error=ex)
                         continue
 
                     event.published = True
                     await OutboxRepository(session).update(event, id=event.id)
                     await session.commit()
 
-            await asyncio.sleep(30)
+            await asyncio.sleep(settings.OUTBOX_RELAY_INTERVAL)
     except asyncio.CancelledError:
         logger.info("Outbox Relay worker shutdown")
     finally:

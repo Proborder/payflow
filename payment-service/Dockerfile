@@ -13,7 +13,7 @@ WORKDIR /app
 
 COPY pyproject.toml poetry.lock ./
 
-RUN poetry install --no-root --no-ansi
+RUN poetry install --only main --no-root --no-ansi
 
 # --- STAGE 2: Runtime ---
 FROM python:3.11-slim AS runtime

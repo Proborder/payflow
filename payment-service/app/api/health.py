@@ -1,4 +1,4 @@
-from aiokafka import AIOKafkaProducer
+from aiokafka import AIOKafkaClient
 from fastapi import APIRouter
 from sqlalchemy import text
 from starlette import status
@@ -30,12 +30,13 @@ async def ready(db: DBDep) -> JSONResponse:
         checks["postgresql"] = "Unavailable"
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE
 
+    client = AIOKafkaClient(bootstrap_servers=settings.KAFKA_BOOTSTRAP_URL)
     try:
-        producer = AIOKafkaProducer(bootstrap_servers=settings.KAFKA_BOOTSTRAP_URL)
-        await producer.start()
-        await producer.stop()
+        await client.bootstrap()
     except Exception:
         checks["kafka"] = "Unavailable"
         status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    finally:
+        await client.close()
 
     return JSONResponse(status_code=status_code, content=checks)

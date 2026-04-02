@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     KAFKA_BOOTSTRAP_SERVERS_HOST: str
     KAFKA_BOOTSTRAP_SERVERS_PORT: int
 
+    OUTBOX_RELAY_INTERVAL: int
+
     @property
     def DB_URL(self):
         return f"postgresql+asyncpg://{self.DB_USER}:{self.DB_PASS}@{self.DB_HOST}:{self.DB_PORT}/{self.DB_NAME}"

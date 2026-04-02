@@ -2,7 +2,6 @@ from typing import Annotated
 
 from fastapi import Depends
 
-from app.core.config import settings
 from app.core.database import async_session_maker
 from app.integrations.payment_provider_client import PaymentProviderClient
 from app.services.db_manager import DBManager
@@ -16,8 +15,15 @@ async def get_db():
 DBDep = Annotated[DBManager, Depends(get_db)]
 
 
+class State:
+    payment_client: PaymentProviderClient = None
+
+
+state = State()
+
+
 def get_payment_provider():
-    return PaymentProviderClient(base_url=settings.PROVIDER_URL)
+    return state.payment_client
 
 
 PaymentsProviderDep = Annotated[PaymentProviderClient, Depends(get_payment_provider)]

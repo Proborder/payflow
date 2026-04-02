@@ -1,24 +1,19 @@
 from uuid import UUID
 
 from app.core.exceptions import (
-    CircuitBreakerBlockedRequestExceptions,
     ObjectNotFoundException,
     PaymentNotFoundException,
-    ProviderConnectionExceptions,
     ProviderEmptyResponseExceptions,
 )
+from app.core.logger import logger
 from app.integrations.payment_provider_client import PaymentProviderClient
 from app.models.payments import StatusEnum
 from app.schemas.outbox import OutboxCreate
 from app.schemas.payments import PaymentCreateRequest, PaymentResponse
 from app.services.base import BaseService
-from app.services.db_manager import DBManager
 
 
 class PaymentsService(BaseService):
-    def __init__(self, db: DBManager):
-        super().__init__(db)
-
     async def get_payment(self, payment_id: UUID) -> PaymentResponse:
         try:
             payment = await self.db.payments.get_one(id=payment_id)
@@ -44,12 +39,20 @@ class PaymentsService(BaseService):
                 raise ProviderEmptyResponseExceptions
 
             new_payment.status = StatusEnum.COMPLETED
-        except (ProviderEmptyResponseExceptions, ProviderConnectionExceptions, CircuitBreakerBlockedRequestExceptions):
+        except Exception:
             new_payment.status = StatusEnum.FAILED
-        finally:
+
+        outbox_data = OutboxCreate(event_type="PaymentCreate", payload=new_payment.model_dump(mode="json"))
+
+        try:
             await self.db.payments.update(new_payment, id=new_payment.id)
-            outbox_data = OutboxCreate(event_type="PaymentCreate", payload=new_payment.model_dump(mode="json"))
             await self.db.outbox.add(outbox_data)
             await self.db.commit()
+        except Exception as ex:
+            # Не выбрасываем исключение,
+            # т.к будем считать, что у нас есть воркер, который проходит по записям со статусом PENDING
+            # И повторно пытается их обработать
+
+            logger.error("Database transaction failed", error=ex)
 
         return new_payment, True

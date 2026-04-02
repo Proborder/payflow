@@ -39,18 +39,7 @@ async def test_get_payment_not_found(ac: AsyncClient, setup_database):
 
 
 # Идемпотентность: повторный запрос с тем же idempotency_key не создаёт дубликат
-@pytest.mark.parametrize(
-    "status_code",
-    [
-        201,
-        200
-    ]
-)
-async def test_create_payment_idempotence(
-    status_code,
-    ac: AsyncClient,
-    setup_database
-):
+async def test_create_payment_idempotence(ac: AsyncClient, setup_database):
     response = await ac.post("/api/v1/payments", json={
         "amount": 100,
         "currency": "RUB",
@@ -58,7 +47,16 @@ async def test_create_payment_idempotence(
         "idempotency_key": "3fa85f64-5717-4562-b3fc-5c961f66afa2",
     })
 
-    assert response.status_code == status_code
+    assert response.status_code == 201
+
+    response = await ac.post("/api/v1/payments", json={
+        "amount": 200,
+        "currency": "RUB",
+        "description": "string1111",
+        "idempotency_key": "3fa85f64-5717-4562-b3fc-5c961f66afa2",
+    })
+
+    assert response.status_code == 200
 
 
 # Валидация: отрицательная сумма, невалидная валюта – 422
