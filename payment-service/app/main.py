@@ -13,12 +13,9 @@ from app.api.health import router as health_router
 from app.api.middleware import LoggingMiddleware
 from app.api.payments import router as payment_router
 from app.core.config import settings
-from app.core.logger import logger, setup_logging
+from app.core.logger import logger
 from app.integrations.kafka.outbox_relay import outbox_relay_worker
 from app.integrations.payment_provider_client import PaymentProviderClient
-
-setup_logging()
-
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
