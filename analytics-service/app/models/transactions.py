@@ -17,4 +17,4 @@ class TransactionsOrm(Base):
     currency: Mapped[str]
     status: Mapped[str]
     event_type: Mapped[str]
-    processed_at: Mapped[datetime] = mapped_column(default=func.now())
+    processed_at: Mapped[datetime]
