@@ -17,9 +17,27 @@ services:
     volumes:
       - ./data/postgres_data_payment:/var/lib/postgresql
 
-  payment_redis:
+  analytics_db:
+    image: postgres:18-alpine
+    container_name: analytics_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASS:-admin}
+      POSTGRES_DB: ${DB_NAME:-analytics}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d analytics"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    ports:
+      - "5434:5432"
+    volumes:
+      - ./data/postgres_data_analytics:/var/lib/postgresql
+
+  redis:
     image: redis:8.6-alpine
-    container_name: payment_redis
+    container_name: redis
     restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
@@ -31,7 +49,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.5.0
-    container_name: payment_kafka
+    container_name: kafka
     environment:
       # Параметры для KRaft
       KAFKA_NODE_ID: 1
@@ -56,7 +74,7 @@ services:
     volumes:
       - ./data/kafka_data:/var/lib/kafka/data
 
-  payment-service:
+  payment_service:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
@@ -71,8 +89,6 @@ services:
       payment_db:
         condition: service_healthy
       kafka:
-        condition: service_healthy
-      payment_redis:
         condition: service_healthy
     environment:
       - DB_HOST=payment_db
@@ -94,6 +110,37 @@ services:
     ports:
       - "7000:8000"
 
+  analytics-service:
+    build:
+      context: .
+      dockerfile: analytics-service/Dockerfile
+    container_name: analytics_app
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/api/v1/health/ready || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+    depends_on:
+      analytics_db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      - DB_HOST=analytics_db
+      - DB_PORT=5432
+      - KAFKA_BOOTSTRAP_SERVERS_HOST=kafka
+      - KAFKA_BOOTSTRAP_SERVERS_PORT=9092
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    env_file:
+      - ./payment-service/.env
+    ports:
+      - "9000:8000"
+
 volumes:
   postgres_data_payment:
+  postgres_data_analytics:
   kafka_data:
