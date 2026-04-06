@@ -74,7 +74,7 @@ services:
     volumes:
       - ./data/kafka_data:/var/lib/kafka/data
 
-  payment_service:
+  payment-service:
     build:
       context: .
       dockerfile: payment-service/Dockerfile
