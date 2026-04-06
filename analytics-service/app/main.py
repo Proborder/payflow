@@ -4,10 +4,11 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from app.api.middleware import LoggingMiddleware
-from app.api.health import router as health_router
 from app.consumer.payment_event import PaymentEventConsumer
 from app.core.logger import logger
 from app.core.redis_conn import redis_manager
+from app.api.health import router as health_router
+from app.api.analytics import router as analytics_router
 
 
 @asynccontextmanager
@@ -43,3 +44,4 @@ app = FastAPI(
 app.add_middleware(LoggingMiddleware)
 
 app.include_router(health_router, prefix="/api/v1")
+app.include_router(analytics_router, prefix="/api/v1")

@@ -17,4 +17,14 @@ class TransactionCreate(BaseModel):
 class Transaction(TransactionCreate):
     model_config = ConfigDict(from_attributes=True)
 
-    id: int
+    id: uuid.UUID
+
+
+class AnalyticsSummary(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    total_count: int
+    total_amount: Decimal
+    completed_count: int
+    failed_count: int
+    average_check: Decimal
