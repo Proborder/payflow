@@ -7,17 +7,20 @@ from app.api.middleware import LoggingMiddleware
 from app.api.health import router as health_router
 from app.consumer.payment_event import PaymentEventConsumer
 from app.core.logger import logger
+from app.core.redis_conn import redis_manager
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("starting_analytics_service")
 
+    await redis_manager.connect()
     consumer = PaymentEventConsumer()
     consumer_task = asyncio.create_task(consumer.consume())
 
     yield
 
+    await redis_manager.close()
     consumer_task.cancel()
 
     try:
