@@ -19,7 +19,7 @@ class AnalyticsService(BaseService):
         try:
             summary_from_cache = await redis_manager.get(key)
         except (RedisError, ConnectionError) as ex:
-            logger.warning(f"Redis is unavailable", error=ex)
+            logger.warning("Redis is unavailable", error=ex)
 
         if not summary_from_cache:
             logger.info(f"Summary data for key: {key}. Fetching from DB")
@@ -31,7 +31,7 @@ class AnalyticsService(BaseService):
             try:
                 await redis_manager.set(key, data.model_dump_json(), settings.REDIS_SUMMARY_EXPIRE)
             except (RedisError, ConnectionError) as ex:
-                logger.warning(f"Redis is unavailable", error=ex)
+                logger.warning("Redis is unavailable", error=ex)
 
             logger.info(f"Summary data returned from DB for key: {key}")
             return data
