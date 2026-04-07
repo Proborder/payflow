@@ -28,6 +28,16 @@ class RedisManager:
     async def delete(self, key: str):
         await self._redis.delete(key)
 
+    async def delete_by_mask(self, pattern: str) -> int:
+        count = 0
+        async for key in self._redis.scan_iter(match=pattern):
+            await self._redis.delete(key)
+            count += 1
+        return count
+
+    async def ping(self):
+        await self._redis.ping()
+
     async def close(self):
         if self._redis:
             await self._redis.close()

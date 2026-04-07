@@ -1,8 +1,11 @@
 import asyncio
 
-from aiokafka import AIOKafkaConsumer
+from aiokafka import AIOKafkaConsumer, ConsumerRecord
+from aiokafka.errors import KafkaError, CommitFailedError
 from pydantic import ValidationError
 from redis import RedisError
+from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 from app.core.database import async_session_maker
@@ -24,69 +27,90 @@ class PaymentEventConsumer:
             enable_auto_commit=False,
         )
 
-    async def consume(self):
+    async def consume(self, stop_event: asyncio.Event):
         logger.info("PaymentEventConsumer start")
         await self.consumer.start()
         try:
-            while True:
-                data = await self.consumer.getmany(timeout_ms=1000)
+            while not stop_event.is_set():
+                try:
+                    data = await self.consumer.getmany(
+                        timeout_ms=settings.KAFKA_CONSUMER_TIMEOUT,
+                        max_records=settings.KAFKA_CONSUMER_MAX_RECORDS,
+                    )
+                except KafkaError as ex:
+                    logger.error("Kafka connection lost or error occurred", error=ex)
+                    await asyncio.sleep(5)
+                    continue
+
                 if not data:
                     continue
 
                 async with async_session_maker() as session:
-                    for _, messages in data.items():
-                        for message in messages:
-                            try:
-                                event_data = KafkaPaymentEvent.model_validate_json(message.value)
-                                logger.info(f"New kafka event: {event_data.event_id} Payment: {event_data.payment_id}")
+                    try:
+                        for _, messages in data.items():
+                            await self.event_handling(session, messages)
 
-                                event_exists = await (
-                                    ProcessedEventsRepository(session)
-                                    .get_one_or_none(event_id=event_data.event_id)
-                                )
+                        await session.commit()
 
-                                if event_exists:
-                                    logger.info(f"The event has already been processed: {event_data.event_id}")
-                                    continue
+                        try:
+                            await self.consumer.commit()
+                        except CommitFailedError as ex:
+                            logger.warning("Kafka rebalance occurred. Batch processed but offset not committed", error=ex)
 
-                                transaction_data = TransactionCreate(
-                                    payment_id=event_data.payment_id,
-                                    amount=event_data.amount,
-                                    currency=event_data.currency,
-                                    status=event_data.status,
-                                    event_type=event_data.event_type,
-                                    processed_at=event_data.timestamp,
-                                )
+                        try:
+                            count_of_deleted_keys = await redis_manager.delete_by_mask("summary-*")
+                            logger.info(f"Cleared {count_of_deleted_keys} summary keys from cache")
+                        except (RedisError, ConnectionError):
+                            logger.warning("Redis unavailable, cache not cleared")
 
-                                processed_event_data = ProcessedEventCreate(
-                                    event_id=event_data.event_id
-                                )
+                    except SQLAlchemyError as ex:
+                        logger.error("Database connection lost or error occurred", error=ex)
+                        await session.rollback()
 
-                                await TransactionsRepository(session).add(transaction_data)
-                                await ProcessedEventsRepository(session).add(processed_event_data)
-
-                                try:
-                                    keys_to_delete = await redis_manager.keys("summary-*")
-                                    if keys_to_delete:
-                                        await redis_manager.delete(*keys_to_delete)
-                                        logger.info(f"Cleared {len(keys_to_delete)} summary keys from cache")
-                                except (RedisError, ConnectionError) as ex:
-                                    logger.warning(f"Redis is unavailable", error=ex)
-
-                            except ValidationError as ex:
-                                logger.error("Schema ValidationError", data=message.value, error=ex)
-                                continue
-
-                            except Exception as ex:
-                                logger.error("Unexpected error", data=message.value, error=ex)
-                                continue
-
-                    await session.commit()
-                    await self.consumer.commit()
+                    except Exception as ex:
+                        logger.error("Unexpected error", error=ex)
+                        await session.rollback()
 
         except asyncio.CancelledError:
             logger.info("PaymentEventConsumer shutdown")
-            raise
 
         finally:
             await self.consumer.stop()
+            logger.info("PaymentEventConsumer shutdown")
+
+    async def event_handling(self, session: AsyncSession, messages: list[ConsumerRecord]) -> None:
+        for message in messages:
+            try:
+                event_data: KafkaPaymentEvent = KafkaPaymentEvent.model_validate_json(message.value)
+                logger.info(f"New kafka event: {event_data.event_id} Payment: {event_data.payment_id}")
+
+                event_exists = await (
+                    ProcessedEventsRepository(session)
+                    .get_one_or_none(event_id=event_data.event_id)
+                )
+
+                if event_exists:
+                    logger.info(f"The event has already been processed: {event_data.event_id}")
+                    continue
+
+                transaction_data = TransactionCreate(
+                    payment_id=event_data.payment_id,
+                    amount=event_data.amount,
+                    currency=event_data.currency,
+                    status=event_data.status,
+                    event_type=event_data.event_type,
+                    processed_at=event_data.timestamp,
+                )
+
+                processed_event_data = ProcessedEventCreate(event_id=event_data.event_id)
+
+                await TransactionsRepository(session).add(transaction_data)
+                await ProcessedEventsRepository(session).add(processed_event_data)
+
+            except ValidationError as ex:
+                logger.error("Schema ValidationError", data=message.value, error=ex)
+                continue
+
+            except Exception as ex:
+                logger.error("Unexpected error", data=message.value, error=ex)
+                raise
