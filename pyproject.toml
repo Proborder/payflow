@@ -63,6 +63,7 @@ ignore = [
     "D100", # Missing docstring in public module
     "D103", # Missing docstring in public function
     "S101", # Allow assert (нужно для pytest)
+    "B008",
 ]
 
 [tool.ruff.lint.isort]
