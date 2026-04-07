@@ -1,10 +1,10 @@
 from datetime import date
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 
 from app.models.transactions import TransactionsOrm
 from app.repositories.base import BaseRepository
-from app.schemas.transactions import Transaction, AnalyticsSummary
+from app.schemas.transactions import AnalyticsSummary, Transaction
 
 
 class TransactionsRepository(BaseRepository):
