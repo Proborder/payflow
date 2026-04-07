@@ -2,10 +2,12 @@ import asyncio
 
 from aiokafka import AIOKafkaConsumer
 from pydantic import ValidationError
+from redis import RedisError
 
 from app.core.config import settings
 from app.core.database import async_session_maker
 from app.core.logger import logger
+from app.core.redis_conn import redis_manager
 from app.repositories.processed_events import ProcessedEventsRepository
 from app.repositories.transactions import TransactionsRepository
 from app.schemas.kafka import KafkaPaymentEvent
@@ -15,7 +17,7 @@ from app.schemas.transactions import TransactionCreate
 
 class PaymentEventConsumer:
     def __init__(self):
-        self.consumer = AIOKafkaConsumer(
+        self.consumer: AIOKafkaConsumer = AIOKafkaConsumer(
             "payments_events",
             bootstrap_servers=settings.KAFKA_BOOTSTRAP_URL,
             group_id=settings.KAFKA_CONSUMER_GROUP,
@@ -62,6 +64,14 @@ class PaymentEventConsumer:
 
                                 await TransactionsRepository(session).add(transaction_data)
                                 await ProcessedEventsRepository(session).add(processed_event_data)
+
+                                try:
+                                    keys_to_delete = await redis_manager.keys("summary-*")
+                                    if keys_to_delete:
+                                        await redis_manager.delete(*keys_to_delete)
+                                        logger.info(f"Cleared {len(keys_to_delete)} summary keys from cache")
+                                except (RedisError, ConnectionError) as ex:
+                                    logger.warning(f"Redis is unavailable", error=ex)
 
                             except ValidationError as ex:
                                 logger.error("Schema ValidationError", data=message.value, error=ex)

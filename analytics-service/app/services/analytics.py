@@ -1,17 +1,43 @@
+import json
 import uuid
 from datetime import date
 
+from redis.exceptions import RedisError
+
+from app.core.config import settings
 from app.core.exceptions import ObjectNotFoundException, TransactionNotFoundException
+from app.core.logger import logger
+from app.core.redis_conn import redis_manager
 from app.services.base import BaseService
 
 
 class AnalyticsService(BaseService):
     async def summary(self, date_from: date, date_to: date, currency: str):
-        return await self.db.transactions.get_analytics_summary(
-            date_from=date_from,
-            date_to=date_to,
-            currency=currency
-        )
+        key = f"summary-{date_from}-{date_to}-{currency}"
+        summary_from_cache = None
+
+        try:
+            summary_from_cache = await redis_manager.get(key)
+        except (RedisError, ConnectionError) as ex:
+            logger.warning(f"Redis is unavailable", error=ex)
+
+        if not summary_from_cache:
+            logger.info(f"Summary data for key: {key}. Fetching from DB")
+            data = await self.db.transactions.get_analytics_summary(
+                date_from=date_from,
+                date_to=date_to,
+                currency=currency
+            )
+            try:
+                await redis_manager.set(key, data.model_dump_json(), settings.REDIS_SUMMARY_EXPIRE)
+            except (RedisError, ConnectionError) as ex:
+                logger.warning(f"Redis is unavailable", error=ex)
+
+            logger.info(f"Summary data returned from DB for key: {key}")
+            return data
+        else:
+            logger.info(f"Summary data returned from cache for key: {key}")
+            return json.loads(summary_from_cache)
 
     async def get_transactions(
         self,
