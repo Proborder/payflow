@@ -54,4 +54,5 @@ class TransactionsRepository(BaseRepository):
 
         result = await self.session.execute(query)
         model = result.one()
+
         return AnalyticsSummary.model_validate(model, from_attributes=True)
