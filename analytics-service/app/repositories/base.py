@@ -1,3 +1,5 @@
+from typing import Sequence
+
 from pydantic import BaseModel
 from sqlalchemy import insert, select
 from sqlalchemy.exc import NoResultFound
@@ -40,4 +42,8 @@ class BaseRepository:
 
     async def add(self, data: BaseModel):
         add_data_stmt = insert(self.model).values(**data.model_dump())
+        await self.session.execute(add_data_stmt)
+
+    async def add_bulk(self, data: Sequence[BaseModel]):
+        add_data_stmt = insert(self.model).values([item.model_dump() for item in data])
         await self.session.execute(add_data_stmt)

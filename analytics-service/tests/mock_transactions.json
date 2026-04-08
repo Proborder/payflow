@@ -1,0 +1,106 @@
+[
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc1f",
+      "amount": 50.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc2f",
+      "amount": 23414.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc3f",
+      "amount": 1322.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc4f",
+      "amount": 99.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc5f",
+      "amount": 556.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc6f",
+      "amount": 51.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc7f",
+      "amount": 268.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc8f",
+      "amount": 300.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087595dc9f",
+      "amount": 2.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "1a1a4f24-a093-49d8-bb18-d4087595dc6f",
+      "amount": 15.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "2a1a4f24-a093-49d8-bb18-d4087592dc6f",
+      "amount": 10.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "3a1a4f24-a093-49d8-bb18-d4087595dc6f",
+      "amount": 20.00,
+      "currency": "RUB",
+      "status": "COMPLETED",
+      "event_type": "payment.completed",
+      "processed_at": "2026-04-06 10:22:27.868"
+    },
+    {
+      "payment_id": "4a1a4f24-a093-49d8-bb18-d4087595dc6f",
+      "amount": 500.00,
+      "currency": "USD",
+      "status": "FAILED",
+      "event_type": "payment.failed",
+      "processed_at": "2026-04-08 10:22:27.868"
+    }
+]

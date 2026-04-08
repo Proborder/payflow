@@ -47,7 +47,7 @@ class AnalyticsService(BaseService):
         date_from: date,
         date_to: date
     ):
-        per_page = pagination.per_page or 5
+        per_page = pagination.per_page or 15
         return await self.db.transactions.get_filtered_by_time(
             status=status,
             currency=currency,
