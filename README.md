@@ -2,11 +2,20 @@
 
 ## 1. ⚙️ Подготовка окружения
 
-Сначала создайте файлы конфигурации в payment-serivce из примеров:
+Сначала создайте файлы конфигурации из примеров
+
+В payment-service:
 
 ```bash
-cp .env.example .env
-cp .env-test.example .env-test
+cp payment-service/.env.example .env
+cp payment-service/.env-test.example .env-test
+```
+
+В analytics-service:
+
+```bash
+cp analytics-service/.env.example .env
+cp analytics-service/.env-test.example .env-test
 ```
 
 ---
@@ -27,6 +36,7 @@ docker-compose up -d --build
 
 ```bash
 docker exec -it payment_db psql -U postgres -c "CREATE DATABASE test;"
+docker exec -it analytics_db psql -U postgres -c "CREATE DATABASE test;"
 ```
 
 ---
@@ -37,6 +47,14 @@ docker exec -it payment_db psql -U postgres -c "CREATE DATABASE test;"
 
 ```bash
 cd payment-service
+
+poetry install
+poetry run alembic upgrade head
+poetry run uvicorn app.main:app --reload --port 8000
+```
+
+```bash
+cd analytics-service
 
 poetry install
 poetry run alembic upgrade head
@@ -62,7 +80,7 @@ pytest
 docker-compose down
 
 # Просмотр логов приложения
-docker logs -f payment_app
+docker logs -f
 
 # Проверить статус контейнеров
 docker ps
