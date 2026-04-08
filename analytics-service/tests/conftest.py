@@ -1,6 +1,6 @@
 import json
 from typing import AsyncGenerator
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import fakeredis
 import pytest
@@ -23,6 +23,18 @@ async def patch_redis_manager():
     redis_manager.connect = AsyncMock()
 
     yield fake_redis
+
+
+@pytest.fixture(scope="function", autouse=True)
+def mock_kafka_consumer():
+    with patch("app.consumer.payment_event.AIOKafkaConsumer", autospec=True) as mock_class:
+        instance = mock_class.return_value
+        instance.start = AsyncMock()
+        instance.stop = AsyncMock()
+        instance.commit = AsyncMock()
+        instance.getmany = AsyncMock(return_value={})
+
+        yield instance
 
 
 async def get_db_null_pool():

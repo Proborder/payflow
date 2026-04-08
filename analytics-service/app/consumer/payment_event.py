@@ -32,6 +32,7 @@ class PaymentEventConsumer:
         await self.consumer.start()
         try:
             while not stop_event.is_set():
+                await asyncio.sleep(0)
                 try:
                     data = await self.consumer.getmany(
                         timeout_ms=settings.KAFKA_CONSUMER_TIMEOUT,
