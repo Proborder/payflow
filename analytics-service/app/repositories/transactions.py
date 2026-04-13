@@ -1,6 +1,6 @@
 from datetime import date
 
-from sqlalchemy import func, select
+from sqlalchemy import func, select, Numeric
 
 from app.models.transactions import TransactionsOrm
 from app.repositories.base import BaseRepository
@@ -42,7 +42,7 @@ class TransactionsRepository(BaseRepository):
             func.coalesce(func.sum(TransactionsOrm.amount), 0).label("total_amount"),
             func.count(TransactionsOrm.id).filter(TransactionsOrm.status == "COMPLETED").label("completed_count"),
             func.count(TransactionsOrm.id).filter(TransactionsOrm.status == "FAILED").label("failed_count"),
-            func.coalesce(func.avg(TransactionsOrm.amount), 0).label("average_check"),
+            func.coalesce(func.avg(TransactionsOrm.amount).cast(Numeric), 0).label("average_check"),
         )
 
         if date_from:

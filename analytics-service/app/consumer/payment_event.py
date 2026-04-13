@@ -60,17 +60,26 @@ class PaymentEventConsumer:
 
                         try:
                             count_of_deleted_keys = await redis_manager.delete_by_mask("summary-*")
-                            logger.info(f"Cleared {count_of_deleted_keys} summary keys from cache")
+                            if count_of_deleted_keys:
+                                logger.info(f"Cleared {count_of_deleted_keys} summary keys from cache")
                         except (RedisError, ConnectionError):
                             logger.warning("Redis unavailable, cache not cleared")
 
-                    except SQLAlchemyError as ex:
+                    except (SQLAlchemyError, Exception) as ex:
                         logger.error("Database connection lost or error occurred", error=ex)
                         await session.rollback()
 
-                    except Exception as ex:
-                        logger.error("Unexpected error", error=ex)
-                        await session.rollback()
+                        for tp, messages in data.items():
+                            first_offset = messages[0].offset
+                            logger.info(f"Seeking back to offset {first_offset} for partition {tp.partition}")
+                            self.consumer.seek(tp, first_offset)
+
+                        await asyncio.sleep(5)
+                        continue
+
+                    # except Exception as ex:
+                    #     logger.error("Unexpected error", error=ex)
+                    #     await session.rollback()
 
         except asyncio.CancelledError:
             logger.info("PaymentEventConsumer shutdown")
