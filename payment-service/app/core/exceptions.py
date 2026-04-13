@@ -31,6 +31,10 @@ class PaymentNotFoundException(ServicePaymentExceptions):
     detail = "Платёж не найден"
 
 
+class DatabaseNotUnavailableException(ServicePaymentExceptions):
+    detail = "База данных временно недоступна"
+
+
 class CircuitBreakerBlockedRequestExceptions(ServicePaymentExceptions):
     detail = "CircuitBreaker открыт. Запрос заблокирован"
 
@@ -46,3 +50,8 @@ class ServicePaymentHTTPExceptions(HTTPException):
 class PaymentNotFoundHTTPException(ServicePaymentHTTPExceptions):
     status_code = 404
     detail = "Платёж не найден"
+
+
+class DatabaseNotUnavailableHTTPException(ServicePaymentHTTPExceptions):
+    status_code = 503
+    detail = "База данных временно недоступно"
